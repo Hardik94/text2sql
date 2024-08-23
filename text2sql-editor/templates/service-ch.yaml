@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "text2sql-editor.fullname" . }}-ch
+  labels:
+    {{- include "text2sql-editor.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: 8123
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9000
+      targetPort: native
+      protocol: TCP
+      name: native
+  selector:
+    {{- include "text2sql-editor.selectorLabels" . | nindent 4 }}
+

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "text2sql-editor.fullname" . }}-pvc
+  labels:
+    {{- include "text2sql-editor.labels" . | nindent 4 }}
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+

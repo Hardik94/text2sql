@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "text2sql-editor.fullname" . }}-ch
+  labels:
+    {{- include "text2sql-editor.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.clickhouse.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "text2sql-editor.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "text2sql-editor.labels" . | nindent 8 }}
+	{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "text2sql-editor.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.clickhouse.securityContext | nindent 12 }}
+          image: "{{ .Values.clickhouse.repository }}:{{ .Values.clickhouse.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.jupyter.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8123
+              protocol: TCP
+            - name: native
+              containerPort: 9000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          # {{- with .Values.volumeMounts }}
+          volumeMounts:
+            - name: clickhouse-data
+              mountPath: /var/lib/clickhouse/
+            # {{- toYaml . | nindent 12 }}
+          # {{- end }}
+      # {{- with .Values.volumes }}
+      volumes:
+        # {{- toYaml . | nindent 8 }}
+        - name: clickhouse-data
+          persistentVolumeClaim:
+            claimName: '{{ include "text2sql-editor.fullname" . }}-pvc'
+      # {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

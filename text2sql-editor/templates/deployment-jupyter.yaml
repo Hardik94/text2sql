@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "text2sql-editor.fullname" . }}-jupyter
+  labels:
+    {{- include "text2sql-editor.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.jupyter.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "text2sql-editor.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "text2sql-editor.labels" . | nindent 8 }}
+	{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "text2sql-editor.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.jupyter.securityContext | nindent 12 }}
+          image: "{{ .Values.jupyter.repository }}:{{ .Values.jupyter.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.jupyter.pullPolicy }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              start.sh jupyter lab --LabApp.token='superadmin' --LabApp.ip='0.0.0.0' --LabApp.allow_root=True
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+          # livenessProbe:
+          #   httpGet:
+          #     path: /api/status
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /api/status
+          #     port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
